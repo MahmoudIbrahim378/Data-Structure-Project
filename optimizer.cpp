@@ -1,13 +1,11 @@
-// optimizer.cpp
 #include "optimizer.h"
-#include <cmath>    // std::fabs
+#include <cmath>  // std::fabs
 
 // Small epsilon to treat "almost zero" as settled
 static const double EPS = 1e-6;
 
-// Returns index of person with maximum positive balance (most creditor).
-// If no positive balance exists, returns -1.
-int getMaxCredit(const std::vector<double>& balance) {
+// Find index of maximum creditor (largest positive balance)
+int getMaxCredit(std::vector<double>& balance) {
     int idx = -1;
     double maxVal = 0.0; // we only care about > 0
 
@@ -20,9 +18,8 @@ int getMaxCredit(const std::vector<double>& balance) {
     return idx;
 }
 
-// Returns index of person with most negative balance (most debtor).
-// If no negative balance exists, returns -1.
-int getMaxDebit(const std::vector<double>& balance) {
+// Find index of maximum debtor (most negative balance)
+int getMaxDebit(std::vector<double>& balance) {
     int idx = -1;
     double minVal = 0.0; // we only care about < 0
 
@@ -35,8 +32,8 @@ int getMaxDebit(const std::vector<double>& balance) {
     return idx;
 }
 
-// Checks if everyone is (approximately) settled.
-bool allSettled(const std::vector<double>& balance) {
+// Check if everyone is approximately settled (|balance| <= EPS)
+bool allSettled(std::vector<double>& balance) {
     for (double b : balance) {
         if (std::fabs(b) > EPS) {
             return false;
@@ -45,49 +42,49 @@ bool allSettled(const std::vector<double>& balance) {
     return true;
 }
 
-// Main greedy minimizer
+// Greedy minimize cash flow
 std::vector<Transaction> minimizeCashFlow(std::vector<double>& balance,
-                                          const std::vector<std::string>& names) {
+                                          std::vector<std::string>& names) {
     std::vector<Transaction> result;
 
     // Safety: sizes must match
     if (balance.size() != names.size()) {
-        // In a real project you might throw, assert, or handle the error.
-        return result;
+        return result; // or handle error differently if you want
     }
 
-    // Repeat until everyone is settled
+    // Repeat until all balances are settled
     while (!allSettled(balance)) {
-        int cred = getMaxCredit(balance);  // index of max creditor
-        int debt = getMaxDebit(balance);   // index of max debtor
+        int cred = getMaxCredit(balance); // index of max creditor
+        int debt = getMaxDebit(balance);  // index of max debtor
 
-        // If we have no valid creditor or debtor, stop
+        // If we can't find a valid creditor or debtor, we stop
         if (cred == -1 || debt == -1) {
             break;
         }
 
-        double creditAmount = balance[cred];    // > 0
-        double debitAmount  = -balance[debt];   // > 0
+        double creditAmount = balance[cred];   // > 0
+        double debitAmount  = -balance[debt];  // > 0
 
         // Amount to transfer is the smaller of the two
         double amount = (creditAmount < debitAmount) ? creditAmount : debitAmount;
 
         if (amount <= EPS) {
-            // Nothing meaningful left to transfer
+            // Nothing meaningful left to move
             break;
         }
 
-        // Record the transaction: debtor -> creditor
+        // Record transaction: debtor -> creditor
         Transaction t;
         t.from   = names[debt];
         t.to     = names[cred];
         t.amount = amount;
         result.push_back(t);
 
-        // Update balances after this transaction
-        balance[cred] -= amount; // creditor's balance moves down towards 0
-        balance[debt] += amount; // debtor's balance moves up towards 0
+        // Update balances
+        balance[cred] -= amount;  // creditor moves towards 0
+        balance[debt] += amount;  // debtor moves towards 0
     }
 
     return result;
 }
+
